@@ -33,7 +33,7 @@ exports.createAdmin = async (req, res) => {
             res.status(400).text(err);
           } else {
             const token= jwt.sign({id:doc._id},process.env.JWT_SECRET_KEY,{expiresIn: '4h' });
-            res.cookie('jwt',token, { expires: new Date(Date.now() + (3600000*4)),httpOnly:true }); //4h
+            res.cookie("jwt",token, { expires: new Date(Date.now() + (3600000*4)),httpOnly:true }); //4h
             res.status(201).json(token);
           }
         });
@@ -66,8 +66,21 @@ exports.loginAdmin = async(req, res) => {
       async function (err, hashedPassword) {
         if (crypto.timingSafeEqual(admin.password, hashedPassword)) {
           const token= jwt.sign({id:admin._id},process.env.JWT_SECRET_KEY,{expiresIn: '4h' });
-          res.cookie('jwt',token, { expires: new Date(Date.now() + (3600000*4)),httpOnly:true }); //4h
-          return res.status(201).json(token);
+         return res.cookie("jwt", token, {
+            // can only be accessed by server requests
+            httpOnly: true,
+            // path = where the cookie is valid
+            path:"/",
+            // domain = what domain the cookie is valid on
+             domain: "localhost",
+            // secure = only send cookie over https
+            secure: false,
+            // sameSite = only send cookie if the request is coming from the same origin
+            sameSite: "lax", // "strict" | "lax" | "none" (secure must be true)
+            // maxAge = how long the cookie is valid for in milliseconds
+            maxAge: 3600000, // 1 hour
+          })
+          .status(200).json(token);
         }
         return res.status(400).json({message:"login failed"});
       })
@@ -88,9 +101,7 @@ exports.checkAdmin = async (req, res) => {
 };
 
 exports.destroySession = (req, res) => {
-  req.session.destroy((err)=>{
-    console.log(err);
-  })
+  res.clearCookie('connect.sid');
   res.clearCookie('jwt');
   res.json({ message: "success" });
 };
